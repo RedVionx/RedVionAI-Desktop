@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://redvionx.github.io/RedVion-Desktop/sitemap.xml
