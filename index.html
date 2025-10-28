@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>RedVion AI — Desktop</title>
+<link rel="manifest" href="manifest.json">
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
+</script>
+<style>
+:root{
+  --bg:#0f1115;--panel:#16171b;--muted:#9aa6b2;--accent:#4ea8de;--bot:#2b2b2f;
+}
+html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6;font-family:Inter,system-ui,Segoe UI,Helvetica,Arial}
+.app{display:flex;height:100vh;gap:12px;padding:12px;box-sizing:border-box}
+/* Sidebar */
+.sidebar{width:220px;background:linear-gradient(180deg,#141516,#101113);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:10px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo img{width:40px;height:40px;border-radius:8px}
+.logo h1{font-size:16px;margin:0}
+.side-btn{background:transparent;border:1px solid rgba(255,255,255,0.03);color:var(--muted);padding:8px;border-radius:8px;text-align:left;cursor:pointer;font-size:14px}
+.side-btn.active{outline:2px solid rgba(78,168,222,0.12);color:#cfe3f9}
+.small{font-size:13px;color:var(--muted)}
+.recent-list{margin-top:6px;overflow:auto;max-height:42vh;display:flex;flex-direction:column;gap:6px}
+/* Main area */
+.main{flex:1;display:flex;flex-direction:column;border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#0b0c0f,#0e1013);box-shadow:0 10px 40px rgba(0,0,0,0.6)}
+.header{height:56px;display:flex;align-items:center;gap:12px;padding:10px 16px;background:linear-gradient(90deg,#15161a,#0f1114)}
+.header h2{margin:0;font-size:16px;color:#f3f6fa}
+.body{display:flex;flex:1;overflow:hidden}
+.chat-panel{flex:1;display:flex;flex-direction:column;min-width:0}
+.chat-window{flex:1;padding:18px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+/* bubbles */
+.bubble{max-width:72%;padding:12px 14px;border-radius:14px;line-height:1.45;word-break:break-word}
+.user{align-self:flex-end;background:#2f3337;color:#eaf6ff;border-bottom-right-radius:6px}
+.ai{align-self:flex-start;background:var(--bot);color:#e6eef6;border-bottom-left-radius:6px;white-space:pre-wrap}
+.thinking{align-self:flex-start;color:var(--muted);font-style:italic}
+/* code terminal */
+.terminal{background:#0b0c0f;border:1px solid rgba(255,255,255,0.03);padding:12px;border-radius:8px;color:#cfe3f9;font-family:monospace;white-space:pre;max-width:84%}
+.terminal .toolbar{display:flex;gap:8px;margin-bottom:8px}
+.copy-btn{background:#1f6a8f;border:none;padding:6px 10px;border-radius:6px;color:#fff;cursor:pointer}
+/* toolbar / tools */
+.toolbar-row{display:flex;gap:8px;align-items:center;margin-left:auto}
+.tool-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:8px;cursor:pointer;color:var(--muted)}
+.tool-btn.left{margin-right:auto}
+/* input area */
+.input-area{display:flex;flex-direction:column;gap:8px;padding:12px;border-top:1px solid rgba(255,255,255,0.02);background:linear-gradient(180deg,#0b0c0f,#0e1013)}
+textarea.input{flex:1;min-height:42px;max-height:160px;resize:none;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:#0e1216;color:#e6eef6;overflow:auto}
+.icon-btn{background:transparent;border:1px solid rgba(255,255,255,0.03);padding:8px;border-radius:10px;cursor:pointer;color:var(--muted)}
+.left-tools{display:flex;gap:6px;align-items:center}
+.right-tools{display:flex;gap:6px;align-items:center}
+/* small modals */
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#0e1114;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 10px 40px rgba(0,0,0,0.7);z-index:50;min-width:320px}
+.modal h3{margin:0 0 8px 0}
+.modal .close{float:right;cursor:pointer}
+/* attachments list */
+.attach-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.attach-item{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:13px}
+/* responsive */
+@media (max-width:900px){ .sidebar{display:none} }
+</style>
+</head>
+<body>
+<!-- Startup Animation -->
+<div id="startupAnimation" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f1115;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:9999;color:#4ea8de;font-size:24px;font-weight:bold;">
+  <div>RedVion-AI</div>
+  <div style="margin-top:12px;font-size:16px;">Chat With Fun</div>
+</div>
+
+<div class="app">
+  <div class="sidebar" role="navigation" aria-label="Sidebar">
+    <div class="logo">
+      <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect rx='12' width='64' height='64' fill='%23d946ef'/><text x='50%' y='54%' font-size='28' font-family='Arial' text-anchor='middle' fill='white'>R</text></svg>" alt="RedVion"/>
+      <div>
+        <h1>RedVion</h1>
+        <div class="small">AI Assistant</div>
+      </div>
+    </div>
+
+    <button class="side-btn" onclick="newChat()">➕ New Chat</button>
+    <button class="side-btn" onclick="openLib()">📚 Library</button>
+    <div style="margin-top:6px"><div class="small"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='8' fill='%234ea8de'/></svg>"/> Recent</div></div>
+    <div class="recent-list" id="recentList"></div>
+
+    <button class="side-btn" onclick="openProjects()">💡 New Projects</button>
+    <button class="side-btn" onclick="deleteAllChats()">🗑 Delete Recent Chats</button>
+    <div style="flex:1"></div>
+    <div class="small" style="text-align:center">v1 · Offline UI</div>
+  </div>
+
+  <div class="main" role="main">
+    <div class="header">
+      <h2 id="chatTitle">New Chat</h2>
+      <div class="toolbar-row">
+        <div class="left-tools">
+          <button class="tool-btn left" title="Image / Video Tools" onclick="openToolMenu()">🛠 Tools</button>
+          <button class="tool-btn" title="Attach files/audios" onclick="document.getElementById('fileInput').click()">＋</button>
+        </div>
+        <div class="right-tools">
+          <button class="tool-btn" id="ttsToggle" title="Toggle voice" onclick="toggleTTS()">🔊</button>
+          <button class="tool-btn" title="Set API Key" onclick="openApiKeyModal()">🔑</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="chat-panel">
+        <div class="chat-window" id="chatWindow" aria-live="polite"></div>
+        <div class="input-area">
+          <input id="fileInput" type="file" style="display:none" multiple onchange="handleFiles(event)" />
+          <div style="flex:1;display:flex;flex-direction:column">
+            <textarea id="userInput" class="input" placeholder="Type a message... (Enter = send)"></textarea>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+              <div style="display:flex;gap:6px">
+                <button class="icon-btn" title="Attach" onclick="document.getElementById('fileInput').click()">📎</button>
+                <button class="icon-btn" title="Image/Video Tools" onclick="openToolMenu()">🖼️</button>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="icon-btn" title="Voice" onclick="startVoice()">🎤</button>
+                <button class="icon-btn" title="Send" onclick="send()">➤</button>
+              </div>
+            </div>
+            <div style="text-align:center;margin-top:6px;font-size:12px;color:var(--muted);">
+              © 2025 All rights reserved ShadowWalker, Inventor Of RedVion-AI — Pakistan
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div id="libModal" class="modal" style="display:none">
+  <span class="close" onclick="closeLib()">✖</span>
+  <h3>Library — In development</h3>
+  <p>This area will display saved templates, snippets and resources.</p>
+</div>
+
+<div id="projModal" class="modal" style="display:none">
+  <span class="close" onclick="closeProjects()">✖</span>
+  <h3>Projects — In development</h3>
+  <p>Create and manage projects here in future updates.</p>
+</div>
+
+<div id="toolsModal" class="modal" style="display:none">
+  <span class="close" onclick="closeToolMenu()">✖</span>
+  <h3>Tools</h3>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <button onclick="promptImage()">Generate Image</button>
+    <button onclick="promptVideo()">Generate Video (dev)</button>
+    <button onclick="openFileUploader()">Upload Files</button>
+  </div>
+</div>
+
+<div id="apiKeyModal" class="modal" style="display:none">
+  <span class="close" onclick="closeApiKeyModal()">✖</span>
+  <h3>Set API Key</h3>
+  <input type="text" id="apiKeyInput" placeholder="Enter your API Key" style="width:100%;padding:8px;border-radius:6px;border:1px solid #555;margin-top:8px">
+  <button onclick="saveApiKey()" style="margin-top:8px;padding:6px 12px;border-radius:6px;background:#4ea8de;color:#fff;border:none;cursor:pointer">Save</button>
+  <button onclick="deleteApiKey()" style="margin-top:8px;padding:6px 12px;border-radius:6px;background:#ff4d4f;color:#fff;border:none;cursor:pointer">Delete API Key</button>
+</div>
+
+<script>
+/* ------------- CONFIG ------------- */
+let API_KEY = "";
+const CHAT_URL = "https://api.openai.com/v1/chat/completions";
+
+/* ------------- State ------------- */
+let chats = JSON.parse(localStorage.getItem('rv_chats_v2') || '[]');
+let current = { title: "New Chat", messages: [] };
+let ttsEnabled = false;
+let isThinking = false;
+
+/* Load API key if exists */
+(function(){
+  const stored = localStorage.getItem('rv_api_key');
+  if(stored){ 
+    API_KEY = stored; 
+    const el = document.getElementById('apiKeyInput');
+    if (el) el.value = stored;
+  }
+})();
+
+/* ------------------- Recent chats ------------------- */
+const chatWindow = document.getElementById('chatWindow');
+const recentList = document.getElementById('recentList');
+const chatTitleEl = document.getElementById('chatTitle');
+const userInput = document.getElementById('userInput');
+
+function renderRecent(){
+  recentList.innerHTML="";
+  chats.slice().reverse().forEach((c,i)=>{
+    const idx = chats.length-1-i;
+    const div=document.createElement('div');
+    div.className='recent-item side-btn';
+    div.textContent=c.title;
+    div.onclick=()=>loadChat(idx);
+    recentList.appendChild(div);
+  });
+}
+renderRecent();
+
+function saveChats(){
+  localStorage.setItem('rv_chats_v2', JSON.stringify(chats));
+}
+
+function loadChat(idx){
+  current = JSON.parse(JSON.stringify(chats[idx]));
+  chatTitleEl.textContent = current.title;
+  renderMessages();
+}
+
+async function newChat(){
+  if(current.messages.length){
+    await assignChatTitle(current);
+    chats.push(current);
+    saveChats();
+    renderRecent();
+  }
+  current = { title:"New Chat", messages:[] };
+  chatTitleEl.textContent = current.title;
+  renderMessages();
+}
+
+async function assignChatTitle(chat){
+  if(!API_KEY) return;
+  try{
+    const prompt = "Summarize this conversation in 3-6 words as a chat title:\n" +
+      chat.messages.map(m=>`${m.role}: ${m.content}`).join("\n");
+    const res = await fetch(CHAT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${API_KEY}`},
+      body:JSON.stringify({ model:"gpt-4o-mini", messages:[{role:"user", content:prompt}] })
+    });
+    const data = await res.json();
+    const title = data.choices?.[0]?.message?.content?.trim() || chat.messages[0].content.slice(0,30);
+    chat.title = title.replace(/["']/g,"");
+  }catch(err){
+    console.log("Title AI failed:",err);
+    chat.title = chat.messages[0].content.slice(0,30);
+  }
+}
+
+function renderMessages(){
+  chatWindow.innerHTML='';
+  for(const m of current.messages){
+    const div=document.createElement('div');
+    div.className = m.role==='user' ? 'bubble user' : 'bubble ai';
+    div.textContent = m.content;
+    chatWindow.appendChild(div);
+  }
+  chatWindow.scrollTop=chatWindow.scrollHeight;
+}
+
+userInput.addEventListener('keydown',(e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); send(); }
+});
+
+async function send(){
+  if(isThinking) return;
+  const text=userInput.value.trim();
+  if(!text) return;
+  if(!API_KEY){
+    alert("⚠️ Please set your OpenAI API Key first!");
+    return;
+  }
+
+  current.messages.push({ role:'user', content:text });
+  renderMessages();
+  userInput.value='';
+  showThinking();
+
+  try{
+    const payload={ 
+      model:"gpt-4o-mini", 
+      messages: current.messages 
+    };
+
+    const res = await fetch(CHAT_URL,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if(!res.ok){
+      hideThinking();
+      const errTxt = await res.text();
+      current.messages.push({role:'assistant', content:`❌ API Error: ${res.status} ${res.statusText}\n${errTxt}`});
+      renderMessages();
+      return;
+    }
+
+    const data = await res.json();
+    hideThinking();
+
+    const reply = data?.choices?.[0]?.message?.content;
+    if(reply){
+      current.messages.push({ role:'assistant', content:reply });
+    } else {
+      current.messages.push({ role:'assistant', content:"⚠️ No response received from AI." });
+    }
+
+    renderMessages();
+  }catch(err){
+    hideThinking();
+    current.messages.push({role:'assistant', content:'⚠️ Network error: '+err.message});
+    renderMessages();
+  }
+}
+
+function showThinking(){
+  isThinking=true;
+  const d=document.createElement('div');
+  d.className='bubble thinking';
+  d.id='thinkingBubble';
+  d.textContent='RedVion is thinking...';
+  chatWindow.appendChild(d);
+  chatWindow.scrollTop=chatWindow.scrollHeight;
+}
+function hideThinking(){
+  isThinking=false;
+  const el=document.getElementById('thinkingBubble');
+  if(el) el.remove();
+}
+
+/* ------------------- Buttons FIX ------------------- */
+function openLib(){ document.getElementById("libModal").style.display="block"; }
+function closeLib(){ document.getElementById("libModal").style.display="none"; }
+function openProjects(){ document.getElementById("projModal").style.display="block"; }
+function closeProjects(){ document.getElementById("projModal").style.display="none"; }
+function openToolMenu(){ document.getElementById("toolsModal").style.display="block"; }
+function closeToolMenu(){ document.getElementById("toolsModal").style.display="none"; }
+function openApiKeyModal(){ document.getElementById("apiKeyModal").style.display="block"; }
+function closeApiKeyModal(){ document.getElementById("apiKeyModal").style.display="none"; }
+
+function saveApiKey(){
+  API_KEY=document.getElementById("apiKeyInput").value.trim();
+  localStorage.setItem("rv_api_key",API_KEY);
+  alert("✅ API key saved!");
+}
+function deleteApiKey(){
+  API_KEY="";
+  localStorage.removeItem("rv_api_key");
+  document.getElementById("apiKeyInput").value="";
+  alert("🗑️ API key deleted!");
+}
+function deleteAllChats(){
+  if(confirm("Delete all recent chats?")){
+    chats=[];
+    saveChats();
+    renderRecent();
+    current={title:"New Chat", messages:[]};
+    renderMessages();
+  }
+}
+
+/* Startup animation hide */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const anim = document.getElementById('startupAnimation');
+    if(anim) anim.style.display = 'none';
+  }, 2000);
+});
+
+/* Save chats on unload */
+window.addEventListener('beforeunload', async ()=>{
+  if(current.messages.length){
+    await assignChatTitle(current);
+    chats.push(JSON.parse(JSON.stringify(current)));
+    saveChats();
+  }
+});
+
+/* Dummy functions for tools/voice/file (to avoid errors) */
+function promptImage(){ alert("🖼️ Image tool clicked"); }
+function promptVideo(){ alert("🎞️ Video tool clicked"); }
+function openFileUploader(){ alert("📂 File uploader clicked"); }
+function startVoice(){ alert("🎤 Voice input clicked"); }
+function toggleTTS(){ ttsEnabled=!ttsEnabled; alert("🔊 TTS "+(ttsEnabled?"enabled":"disabled")); }
+function handleFiles(e){ alert(e.target.files.length+" file(s) selected"); }
+</script>
+</body>
+</html>
