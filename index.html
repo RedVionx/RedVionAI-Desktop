@@ -275,9 +275,15 @@ async function send(){
 
   try{
     const payload={ 
-      model:"gpt-4o-mini", 
-      messages: current.messages 
-    };
+  model:"gpt-4o-mini", 
+  messages: [
+    {
+      role: "system",
+      content: "You are RedVion-AI, an AI assistant created by RedVion Technologies from Pakistan. When asked who made you, always mention RedVion Technologies (Pakistan). Stay polite, helpful, and professional."
+    },
+    ...current.messages
+  ]
+};
 
     const res = await fetch(CHAT_URL,{
       method:'POST',
